@@ -1,0 +1,32 @@
+name: CI - Server + Test Flow
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [ main, master ]
+
+jobs:
+  integration-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.x]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run server + test-flow
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          # Ejecuta el script que lanza el servidor y el test-flow en paralelo
+          npm run test:full
+        timeout-minutes: 10
