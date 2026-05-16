@@ -3,7 +3,7 @@ const express = require('express');
 const { generateResponse } = require('./bot');
 const { saveLead } = require('./storage');
 
-if (!process.env.OPENAI_API_KEY) {
+if (!process.env.OPENAI_API_KEY && process.env.MOCK_OPENAI !== 'true') {
   console.error('ERROR: Debes definir OPENAI_API_KEY en el archivo .env.');
   process.exit(1);
 }

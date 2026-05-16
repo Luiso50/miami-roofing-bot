@@ -1,9 +1,14 @@
 const { OpenAI } = require('openai');
 require('dotenv').config();
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+const MOCK = process.env.MOCK_OPENAI === 'true';
+
+let openai = null;
+if (!MOCK) {
+  openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+}
 
 const SYSTEM_PROMPT = `
 Eres un asistente de atención al cliente para una compañía de roofing en Miami.
@@ -31,6 +36,38 @@ Si no conoces un dato, usa null. No inventes información.
 `;
 
 async function generateResponse(message, history = []) {
+  const MOCK = process.env.MOCK_OPENAI === 'true';
+
+  if (MOCK) {
+    // Modo mock: respuestas determinísticas para CI/local sin llamar a OpenAI
+    const lower = (message || '').toLowerCase();
+    let textResponse = 'Gracias por el mensaje. ¿Puedes darme más detalles?';
+    let metadata = { direccion: null, urgencia: null, causa: null, listoParaCita: false };
+
+    if (/(gotera|fuga|techo|roof)/i.test(lower)) {
+      textResponse = '¿El problema es por tormenta o desgaste?';
+    }
+
+    if (/(tormenta|lluvia|storm)/i.test(lower)) {
+      textResponse = '¿Cuál es la dirección?';
+      metadata.causa = 'tormenta';
+    }
+
+    // Detectar dirección sencilla (número + palabra)
+    if (/\d+\s+\w+/.test(lower) && metadata.direccion === null) {
+      textResponse = '¿Qué tan urgente es? (urgente / esta semana / flexible)';
+      metadata.direccion = message.trim();
+    }
+
+    if (/(urgente|urgencia)/i.test(lower)) {
+      textResponse = 'Perfecto, podemos agendar una inspección gratuita. ¿Qué día te funciona?';
+      metadata.urgencia = 'urgente';
+      metadata.listoParaCita = true;
+    }
+
+    return { textResponse, metadata };
+  }
+
   try {
     const messages = [
       { role: 'system', content: SYSTEM_PROMPT },
